@@ -1,0 +1,28 @@
+# Environment files (contain secrets)
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+build/
+build-http/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# CSV exports
+*.csv
+
+# IDE
+.vscode/
+.idea/
+
+# Claude session data
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db

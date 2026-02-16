@@ -1,0 +1,43 @@
+# Snipe-IT MCP Server + Cloudflare Tunnel deployment
+#
+# Prerequisites:
+#   1. Copy .env.example to .env and fill in your values
+#   2. Build the cloudflared image: docker build -t cloudflared:latest .
+#   3. Ensure your Snipe-IT Docker network exists (see "networks" section below)
+#
+# Usage:
+#   docker compose up -d --build
+
+services:
+  mcp-server:
+    build: ../mcp-server
+    container_name: mcp-server
+    restart: unless-stopped
+    ports:
+      - "3100:3000"        # Host access for local testing (MCP server listens on 3000 internally)
+    environment:
+      - SNIPEIT_URL=http://snipeit-app:80       # Internal Docker hostname for your Snipe-IT container
+      - SNIPEIT_API_TOKEN=${SNIPEIT_API_TOKEN}   # From .env — your Snipe-IT API token
+      - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN}     # From .env — token for authenticating MCP clients
+      - PORT=3000                                 # Internal port (do not change unless you update the port mapping)
+      - ALLOW_HTTP=true                           # Required: container-to-container traffic uses HTTP
+    networks:
+      - snipeit-network
+
+  cloudflared:
+    image: cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}  # From .env — your Cloudflare Tunnel token
+    depends_on:
+      - mcp-server
+    networks:
+      - snipeit-network
+
+networks:
+  snipeit-network:
+    external: true
+    # IMPORTANT: Change this to match YOUR Snipe-IT Docker network name.
+    # Find it with: docker network ls | grep snipeit
+    # Common names: snipeit-docker_snipeit-network, snipeit_default, etc.
+    name: your-snipeit-network

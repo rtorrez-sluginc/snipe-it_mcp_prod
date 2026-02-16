@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "eventsource": "^4.1.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "snipeit": {
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "SNIPEIT_URL": "${SNIPEIT_URL}",
+        "SNIPEIT_API_TOKEN": "${SNIPEIT_API_TOKEN}"
+      }
+    }
+  }
+}
