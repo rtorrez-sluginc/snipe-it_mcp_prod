@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /**
- * Snipe-IT MCP Server - HTTP/SSE Version
- * 
- * This version uses HTTP with Server-Sent Events (SSE) transport
- * instead of stdio, making it compatible with Cloudflare Tunnel.
+ * Snipe-IT MCP Server - Streamable HTTP Version
+ *
+ * This version uses the Streamable HTTP transport (MCP spec recommended)
+ * instead of the deprecated SSE transport, compatible with Cloudflare Tunnel.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
+import { randomUUID } from "crypto";
 import axios, { AxiosInstance } from "axios";
 import express, { Request, Response, NextFunction } from "express";
 import https from "https";
@@ -548,12 +549,11 @@ function authenticateBearer(req: Request, res: Response, next: NextFunction): vo
   next();
 }
 
-// 30 requests per minute per IP for SSE connections, 60 for messages
-const sseRateLimiter = new RateLimiter(60_000, 30);
-const messageRateLimiter = new RateLimiter(60_000, 60);
+// 60 requests per minute per IP
+const rateLimiter = new RateLimiter(60_000, 60);
 
 // ============================================================================
-// EXPRESS APP & SSE SETUP
+// EXPRESS APP & STREAMABLE HTTP SETUP
 // ============================================================================
 
 const app = express();
@@ -567,7 +567,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("X-XSS-Protection", "1; mode=block");
-  res.setHeader("Cache-Control", "no-store");
   next();
 });
 
@@ -576,13 +575,14 @@ app.get("/health", (req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
-    version: "1.0.0",
+    version: "2.0.0",
   });
 });
 
 // Track active sessions with metadata
 interface SessionEntry {
-  transport: SSEServerTransport;
+  transport: StreamableHTTPServerTransport;
+  server: Server;
   createdAt: number;
   lastActivity: number;
   clientIp: string;
@@ -595,25 +595,20 @@ setInterval(() => {
   for (const [id, session] of sessions) {
     if (now - session.lastActivity > SESSION_TIMEOUT_MS) {
       console.log(`Session expired: ${id} (idle ${Math.round((now - session.lastActivity) / 1000)}s)`);
+      session.transport.close();
       sessions.delete(id);
     }
   }
 }, 60_000);
 
-// SSE endpoint for MCP protocol (requires auth)
-app.get("/sse", authenticateBearer, async (req, res) => {
-  const clientIp = getClientIp(req);
-  if (!sseRateLimiter.isAllowed(clientIp)) {
-    res.status(429).json({ error: "Too many connections. Please try again later." });
-    return;
-  }
-  console.log("New SSE connection from:", clientIp);
-
-  // Create MCP server instance for this connection
+/**
+ * Create a new MCP Server instance with tool handlers wired up.
+ */
+function createMcpServer(clientIp: string): Server {
   const server = new Server(
     {
       name: "snipeit-mcp-server-http",
-      version: "1.0.0",
+      version: "2.0.0",
     },
     {
       capabilities: {
@@ -622,12 +617,10 @@ app.get("/sse", authenticateBearer, async (req, res) => {
     }
   );
 
-  // Handle tool listing
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return { tools };
   });
 
-  // Handle tool execution with audit logging
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     const startTime = Date.now();
@@ -704,43 +697,108 @@ app.get("/sse", authenticateBearer, async (req, res) => {
     }
   });
 
-  // Create SSE transport
-  const transport = new SSEServerTransport("/message", res);
-  const now = Date.now();
-  sessions.set(transport.sessionId, {
-    transport,
-    createdAt: now,
-    lastActivity: now,
-    clientIp,
-  });
-  await server.connect(transport);
+  return server;
+}
 
-  req.on("close", () => {
-    console.log(`SSE connection closed: ${transport.sessionId}`);
-    sessions.delete(transport.sessionId);
-  });
-});
-
-// Message endpoint (POST) - requires auth
-app.post("/message", authenticateBearer, express.json({ limit: "10kb" }), async (req, res) => {
+// MCP endpoint - handles POST (messages), GET (SSE stream), DELETE (session close)
+app.post("/mcp", authenticateBearer, express.json({ limit: "10kb" }), async (req: Request, res: Response) => {
   const clientIp = getClientIp(req);
-  if (!messageRateLimiter.isAllowed(clientIp)) {
+  if (!rateLimiter.isAllowed(clientIp)) {
     res.status(429).json({ error: "Too many requests. Please try again later." });
     return;
   }
-  const sessionId = req.query.sessionId as string;
-  const session = sessions.get(sessionId);
-  if (!session) {
-    res.status(403).json({ error: "Forbidden" });
+
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const existingSession = sessionId ? sessions.get(sessionId) : undefined;
+
+  if (existingSession) {
+    // Existing session — route to its transport
+    existingSession.lastActivity = Date.now();
+    try {
+      await existingSession.transport.handleRequest(req, res, req.body);
+    } catch (error: any) {
+      console.error("Error handling message:", error.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
     return;
   }
+
+  // New session — create transport + server
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => randomUUID(),
+    onsessioninitialized: (newSessionId: string) => {
+      console.log(`New MCP session: ${newSessionId} from ${clientIp}`);
+      const now = Date.now();
+      sessions.set(newSessionId, {
+        transport,
+        server,
+        createdAt: now,
+        lastActivity: now,
+        clientIp,
+      });
+    },
+    onsessionclosed: (closedSessionId: string) => {
+      console.log(`MCP session closed: ${closedSessionId}`);
+      sessions.delete(closedSessionId);
+    },
+  });
+
+  const server = createMcpServer(clientIp);
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error: any) {
+    console.error("Error initializing session:", error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
+
+app.get("/mcp", authenticateBearer, async (req: Request, res: Response) => {
+  const clientIp = getClientIp(req);
+  if (!rateLimiter.isAllowed(clientIp)) {
+    res.status(429).json({ error: "Too many requests. Please try again later." });
+    return;
+  }
+
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const session = sessionId ? sessions.get(sessionId) : undefined;
+
+  if (!session) {
+    res.status(400).json({ error: "Invalid or missing session ID" });
+    return;
+  }
+
   session.lastActivity = Date.now();
   try {
-    await session.transport.handlePostMessage(req, res, req.body);
+    await session.transport.handleRequest(req, res);
   } catch (error: any) {
-    console.error("Error handling message:", error.message);
+    console.error("Error handling SSE stream:", error.message);
     if (!res.headersSent) {
-      res.status(500).send("Error handling request");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
+
+app.delete("/mcp", authenticateBearer, async (req: Request, res: Response) => {
+  const sessionId = req.headers["mcp-session-id"] as string | undefined;
+  const session = sessionId ? sessions.get(sessionId) : undefined;
+
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  try {
+    await session.transport.handleRequest(req, res);
+  } catch (error: any) {
+    console.error("Error closing session:", error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
     }
   }
 });
@@ -748,9 +806,9 @@ app.post("/message", authenticateBearer, express.json({ limit: "10kb" }), async 
 // Start server
 app.listen(PORT, () => {
   const host = new URL(SNIPEIT_URL).hostname;
-  console.log(`Snipe-IT MCP Server (HTTP/SSE) listening on port ${PORT}`);
+  console.log(`Snipe-IT MCP Server (Streamable HTTP) listening on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`SSE endpoint: http://localhost:${PORT}/sse`);
+  console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
   console.log(`Connected to Snipe-IT: ${host}`);
   console.log(`Authentication: ${MCP_BEARER_TOKEN ? "enabled" : "DISABLED (no MCP_BEARER_TOKEN set)"}`);
 });
