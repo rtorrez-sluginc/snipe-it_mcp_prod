@@ -302,6 +302,226 @@ class SnipeITClient {
     const response = await this.client.get(`/api/v1/suppliers?${params}`);
     return response.data;
   }
+
+  // ---- UPDATE & DELETE OPERATIONS ----
+
+  async updateAsset(args: any) {
+    const id = InputValidator.validateId(args.asset_id, "asset_id");
+    const data: Record<string, any> = {};
+    if (args.name !== undefined) data.name = InputValidator.validateString(args.name, "name");
+    if (args.serial !== undefined) data.serial = InputValidator.validateString(args.serial, "serial");
+    if (args.asset_tag !== undefined) data.asset_tag = InputValidator.validateString(args.asset_tag, "asset_tag");
+    if (args.model_id !== undefined) data.model_id = InputValidator.validateId(args.model_id, "model_id");
+    if (args.status_id !== undefined) data.status_id = InputValidator.validateId(args.status_id, "status_id");
+    if (args.notes !== undefined) data.notes = InputValidator.validateString(args.notes, "notes", 2000);
+    if (args.purchase_date !== undefined) data.purchase_date = InputValidator.validateDate(args.purchase_date, "purchase_date");
+    if (args.purchase_cost !== undefined) data.purchase_cost = InputValidator.validateString(args.purchase_cost, "purchase_cost", 50);
+    if (args.supplier_id !== undefined) data.supplier_id = InputValidator.validateId(args.supplier_id, "supplier_id");
+    const response = await this.client.put(`/api/v1/hardware/${id}`, data);
+    return response.data;
+  }
+
+  async deleteAsset(args: any) {
+    const id = InputValidator.validateId(args.asset_id, "asset_id");
+    const response = await this.client.delete(`/api/v1/hardware/${id}`);
+    return response.data;
+  }
+
+  async createUser(args: any) {
+    const data: Record<string, any> = {
+      first_name: InputValidator.validateString(args.first_name, "first_name"),
+      username: InputValidator.validateString(args.username, "username"),
+      password: InputValidator.validateString(args.password, "password"),
+    };
+    if (!data.first_name) throw new Error("first_name is required");
+    if (!data.username) throw new Error("username is required");
+    if (!data.password) throw new Error("password is required");
+    if (args.last_name !== undefined) data.last_name = InputValidator.validateString(args.last_name, "last_name");
+    if (args.email !== undefined) data.email = InputValidator.validateString(args.email, "email");
+    if (args.jobtitle !== undefined) data.jobtitle = InputValidator.validateString(args.jobtitle, "jobtitle");
+    if (args.employee_num !== undefined) data.employee_num = InputValidator.validateString(args.employee_num, "employee_num");
+    if (args.department_id !== undefined) data.department_id = InputValidator.validateId(args.department_id, "department_id");
+    if (args.company_id !== undefined) data.company_id = InputValidator.validateId(args.company_id, "company_id");
+    if (args.location_id !== undefined) data.location_id = InputValidator.validateId(args.location_id, "location_id");
+    const response = await this.client.post("/api/v1/users", data);
+    return response.data;
+  }
+
+  async updateUser(args: any) {
+    const id = InputValidator.validateId(args.user_id, "user_id");
+    const data: Record<string, any> = {};
+    if (args.first_name !== undefined) data.first_name = InputValidator.validateString(args.first_name, "first_name");
+    if (args.last_name !== undefined) data.last_name = InputValidator.validateString(args.last_name, "last_name");
+    if (args.username !== undefined) data.username = InputValidator.validateString(args.username, "username");
+    if (args.email !== undefined) data.email = InputValidator.validateString(args.email, "email");
+    if (args.password !== undefined) data.password = InputValidator.validateString(args.password, "password");
+    if (args.jobtitle !== undefined) data.jobtitle = InputValidator.validateString(args.jobtitle, "jobtitle");
+    if (args.employee_num !== undefined) data.employee_num = InputValidator.validateString(args.employee_num, "employee_num");
+    if (args.department_id !== undefined) data.department_id = InputValidator.validateId(args.department_id, "department_id");
+    if (args.company_id !== undefined) data.company_id = InputValidator.validateId(args.company_id, "company_id");
+    if (args.location_id !== undefined) data.location_id = InputValidator.validateId(args.location_id, "location_id");
+    const response = await this.client.put(`/api/v1/users/${id}`, data);
+    return response.data;
+  }
+
+  async deleteUser(args: any) {
+    const id = InputValidator.validateId(args.user_id, "user_id");
+    const response = await this.client.delete(`/api/v1/users/${id}`);
+    return response.data;
+  }
+
+  async createModel(args: any) {
+    const data: Record<string, any> = {
+      name: InputValidator.validateString(args.name, "name"),
+      category_id: InputValidator.validateId(args.category_id, "category_id"),
+    };
+    if (!data.name) throw new Error("name is required");
+    if (args.model_number !== undefined) data.model_number = InputValidator.validateString(args.model_number, "model_number");
+    if (args.manufacturer_id !== undefined) data.manufacturer_id = InputValidator.validateId(args.manufacturer_id, "manufacturer_id");
+    const response = await this.client.post("/api/v1/models", data);
+    return response.data;
+  }
+
+  async updateModel(args: any) {
+    const id = InputValidator.validateId(args.model_id, "model_id");
+    const data: Record<string, any> = {};
+    if (args.name !== undefined) data.name = InputValidator.validateString(args.name, "name");
+    if (args.model_number !== undefined) data.model_number = InputValidator.validateString(args.model_number, "model_number");
+    if (args.category_id !== undefined) data.category_id = InputValidator.validateId(args.category_id, "category_id");
+    if (args.manufacturer_id !== undefined) data.manufacturer_id = InputValidator.validateId(args.manufacturer_id, "manufacturer_id");
+    const response = await this.client.put(`/api/v1/models/${id}`, data);
+    return response.data;
+  }
+
+  async deleteModel(args: any) {
+    const id = InputValidator.validateId(args.model_id, "model_id");
+    const response = await this.client.delete(`/api/v1/models/${id}`);
+    return response.data;
+  }
+
+  async createCategory(args: any) {
+    const data: Record<string, any> = {
+      name: InputValidator.validateString(args.name, "name"),
+      category_type: InputValidator.validateEnum(args.category_type, ["asset", "accessory", "consumable", "component", "license"], "category_type"),
+    };
+    if (!data.name) throw new Error("name is required");
+    const response = await this.client.post("/api/v1/categories", data);
+    return response.data;
+  }
+
+  async updateCategory(args: any) {
+    const id = InputValidator.validateId(args.category_id, "category_id");
+    const data: Record<string, any> = {};
+    if (args.name !== undefined) data.name = InputValidator.validateString(args.name, "name");
+    if (args.category_type !== undefined) data.category_type = InputValidator.validateEnum(args.category_type, ["asset", "accessory", "consumable", "component", "license"], "category_type");
+    const response = await this.client.put(`/api/v1/categories/${id}`, data);
+    return response.data;
+  }
+
+  async deleteCategory(args: any) {
+    const id = InputValidator.validateId(args.category_id, "category_id");
+    const response = await this.client.delete(`/api/v1/categories/${id}`);
+    return response.data;
+  }
+
+  async createLocation(args: any) {
+    const data: Record<string, any> = {
+      name: InputValidator.validateString(args.name, "name"),
+    };
+    if (!data.name) throw new Error("name is required");
+    if (args.address !== undefined) data.address = InputValidator.validateString(args.address, "address");
+    if (args.city !== undefined) data.city = InputValidator.validateString(args.city, "city");
+    if (args.state !== undefined) data.state = InputValidator.validateString(args.state, "state");
+    if (args.country !== undefined) data.country = InputValidator.validateString(args.country, "country");
+    if (args.zip !== undefined) data.zip = InputValidator.validateString(args.zip, "zip", 20);
+    const response = await this.client.post("/api/v1/locations", data);
+    return response.data;
+  }
+
+  async updateLocation(args: any) {
+    const id = InputValidator.validateId(args.location_id, "location_id");
+    const data: Record<string, any> = {};
+    if (args.name !== undefined) data.name = InputValidator.validateString(args.name, "name");
+    if (args.address !== undefined) data.address = InputValidator.validateString(args.address, "address");
+    if (args.city !== undefined) data.city = InputValidator.validateString(args.city, "city");
+    if (args.state !== undefined) data.state = InputValidator.validateString(args.state, "state");
+    if (args.country !== undefined) data.country = InputValidator.validateString(args.country, "country");
+    if (args.zip !== undefined) data.zip = InputValidator.validateString(args.zip, "zip", 20);
+    const response = await this.client.put(`/api/v1/locations/${id}`, data);
+    return response.data;
+  }
+
+  async deleteLocation(args: any) {
+    const id = InputValidator.validateId(args.location_id, "location_id");
+    const response = await this.client.delete(`/api/v1/locations/${id}`);
+    return response.data;
+  }
+
+  async createManufacturer(args: any) {
+    const data: Record<string, any> = {
+      name: InputValidator.validateString(args.name, "name"),
+    };
+    if (!data.name) throw new Error("name is required");
+    if (args.url !== undefined) data.url = InputValidator.validateString(args.url, "url", 500);
+    const response = await this.client.post("/api/v1/manufacturers", data);
+    return response.data;
+  }
+
+  async updateManufacturer(args: any) {
+    const id = InputValidator.validateId(args.manufacturer_id, "manufacturer_id");
+    const data: Record<string, any> = {};
+    if (args.name !== undefined) data.name = InputValidator.validateString(args.name, "name");
+    if (args.url !== undefined) data.url = InputValidator.validateString(args.url, "url", 500);
+    const response = await this.client.put(`/api/v1/manufacturers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteManufacturer(args: any) {
+    const id = InputValidator.validateId(args.manufacturer_id, "manufacturer_id");
+    const response = await this.client.delete(`/api/v1/manufacturers/${id}`);
+    return response.data;
+  }
+
+  async createSupplier(args: any) {
+    const data: Record<string, any> = {
+      name: InputValidator.validateString(args.name, "name"),
+    };
+    if (!data.name) throw new Error("name is required");
+    if (args.address !== undefined) data.address = InputValidator.validateString(args.address, "address");
+    if (args.city !== undefined) data.city = InputValidator.validateString(args.city, "city");
+    if (args.state !== undefined) data.state = InputValidator.validateString(args.state, "state");
+    if (args.country !== undefined) data.country = InputValidator.validateString(args.country, "country");
+    if (args.zip !== undefined) data.zip = InputValidator.validateString(args.zip, "zip", 20);
+    if (args.contact !== undefined) data.contact = InputValidator.validateString(args.contact, "contact");
+    if (args.phone !== undefined) data.phone = InputValidator.validateString(args.phone, "phone", 50);
+    if (args.email !== undefined) data.email = InputValidator.validateString(args.email, "email");
+    if (args.url !== undefined) data.url = InputValidator.validateString(args.url, "url", 500);
+    const response = await this.client.post("/api/v1/suppliers", data);
+    return response.data;
+  }
+
+  async updateSupplier(args: any) {
+    const id = InputValidator.validateId(args.supplier_id, "supplier_id");
+    const data: Record<string, any> = {};
+    if (args.name !== undefined) data.name = InputValidator.validateString(args.name, "name");
+    if (args.address !== undefined) data.address = InputValidator.validateString(args.address, "address");
+    if (args.city !== undefined) data.city = InputValidator.validateString(args.city, "city");
+    if (args.state !== undefined) data.state = InputValidator.validateString(args.state, "state");
+    if (args.country !== undefined) data.country = InputValidator.validateString(args.country, "country");
+    if (args.zip !== undefined) data.zip = InputValidator.validateString(args.zip, "zip", 20);
+    if (args.contact !== undefined) data.contact = InputValidator.validateString(args.contact, "contact");
+    if (args.phone !== undefined) data.phone = InputValidator.validateString(args.phone, "phone", 50);
+    if (args.email !== undefined) data.email = InputValidator.validateString(args.email, "email");
+    if (args.url !== undefined) data.url = InputValidator.validateString(args.url, "url", 500);
+    const response = await this.client.put(`/api/v1/suppliers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteSupplier(args: any) {
+    const id = InputValidator.validateId(args.supplier_id, "supplier_id");
+    const response = await this.client.delete(`/api/v1/suppliers/${id}`);
+    return response.data;
+  }
 }
 
 const snipeit = new SnipeITClient(SNIPEIT_URL, SNIPEIT_API_TOKEN);
@@ -462,6 +682,300 @@ const tools: Tool[] = [
       properties: {
         limit: { type: "number" },
       },
+    },
+  },
+
+  // ---- UPDATE & DELETE TOOLS ----
+
+  {
+    name: "update_asset",
+    description: "Update an existing asset in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        asset_id: { type: "number", description: "The ID of the asset to update (required)" },
+        name: { type: "string", description: "Asset name" },
+        serial: { type: "string", description: "Serial number" },
+        asset_tag: { type: "string", description: "Unique asset tag" },
+        model_id: { type: "number", description: "Model ID" },
+        status_id: { type: "number", description: "Status label ID" },
+        notes: { type: "string", description: "Notes about the asset" },
+        purchase_date: { type: "string", description: "Purchase date (YYYY-MM-DD format)" },
+        purchase_cost: { type: "string", description: "Purchase cost" },
+        supplier_id: { type: "number", description: "Supplier ID" },
+      },
+      required: ["asset_id"],
+    },
+  },
+  {
+    name: "delete_asset",
+    description: "Delete an asset from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        asset_id: { type: "number", description: "The ID of the asset to delete" },
+      },
+      required: ["asset_id"],
+    },
+  },
+  {
+    name: "create_user",
+    description: "Create a new user in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        first_name: { type: "string", description: "First name (required)" },
+        last_name: { type: "string", description: "Last name" },
+        username: { type: "string", description: "Username (required)" },
+        password: { type: "string", description: "Password (required)" },
+        email: { type: "string", description: "Email address" },
+        jobtitle: { type: "string", description: "Job title" },
+        employee_num: { type: "string", description: "Employee number" },
+        department_id: { type: "number", description: "Department ID" },
+        company_id: { type: "number", description: "Company ID" },
+        location_id: { type: "number", description: "Location ID" },
+      },
+      required: ["first_name", "username", "password"],
+    },
+  },
+  {
+    name: "update_user",
+    description: "Update an existing user in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        user_id: { type: "number", description: "The ID of the user to update (required)" },
+        first_name: { type: "string", description: "First name" },
+        last_name: { type: "string", description: "Last name" },
+        username: { type: "string", description: "Username" },
+        email: { type: "string", description: "Email address" },
+        password: { type: "string", description: "Password" },
+        jobtitle: { type: "string", description: "Job title" },
+        employee_num: { type: "string", description: "Employee number" },
+        department_id: { type: "number", description: "Department ID" },
+        company_id: { type: "number", description: "Company ID" },
+        location_id: { type: "number", description: "Location ID" },
+      },
+      required: ["user_id"],
+    },
+  },
+  {
+    name: "delete_user",
+    description: "Delete a user from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        user_id: { type: "number", description: "The ID of the user to delete" },
+      },
+      required: ["user_id"],
+    },
+  },
+  {
+    name: "create_model",
+    description: "Create a new asset model in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Model name (required)" },
+        model_number: { type: "string", description: "Model number" },
+        category_id: { type: "number", description: "Category ID (required)" },
+        manufacturer_id: { type: "number", description: "Manufacturer ID" },
+      },
+      required: ["name", "category_id"],
+    },
+  },
+  {
+    name: "update_model",
+    description: "Update an existing asset model in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        model_id: { type: "number", description: "The ID of the model to update (required)" },
+        name: { type: "string", description: "Model name" },
+        model_number: { type: "string", description: "Model number" },
+        category_id: { type: "number", description: "Category ID" },
+        manufacturer_id: { type: "number", description: "Manufacturer ID" },
+      },
+      required: ["model_id"],
+    },
+  },
+  {
+    name: "delete_model",
+    description: "Delete an asset model from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        model_id: { type: "number", description: "The ID of the model to delete" },
+      },
+      required: ["model_id"],
+    },
+  },
+  {
+    name: "create_category",
+    description: "Create a new category in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Category name (required)" },
+        category_type: { type: "string", description: "Category type (required)", enum: ["asset", "accessory", "consumable", "component", "license"] },
+      },
+      required: ["name", "category_type"],
+    },
+  },
+  {
+    name: "update_category",
+    description: "Update an existing category in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        category_id: { type: "number", description: "The ID of the category to update (required)" },
+        name: { type: "string", description: "Category name" },
+        category_type: { type: "string", description: "Category type", enum: ["asset", "accessory", "consumable", "component", "license"] },
+      },
+      required: ["category_id"],
+    },
+  },
+  {
+    name: "delete_category",
+    description: "Delete a category from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        category_id: { type: "number", description: "The ID of the category to delete" },
+      },
+      required: ["category_id"],
+    },
+  },
+  {
+    name: "create_location",
+    description: "Create a new location in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Location name (required)" },
+        address: { type: "string", description: "Street address" },
+        city: { type: "string", description: "City" },
+        state: { type: "string", description: "State/Province" },
+        country: { type: "string", description: "Country" },
+        zip: { type: "string", description: "Zip/Postal code" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "update_location",
+    description: "Update an existing location in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        location_id: { type: "number", description: "The ID of the location to update (required)" },
+        name: { type: "string", description: "Location name" },
+        address: { type: "string", description: "Street address" },
+        city: { type: "string", description: "City" },
+        state: { type: "string", description: "State/Province" },
+        country: { type: "string", description: "Country" },
+        zip: { type: "string", description: "Zip/Postal code" },
+      },
+      required: ["location_id"],
+    },
+  },
+  {
+    name: "delete_location",
+    description: "Delete a location from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        location_id: { type: "number", description: "The ID of the location to delete" },
+      },
+      required: ["location_id"],
+    },
+  },
+  {
+    name: "create_manufacturer",
+    description: "Create a new manufacturer in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Manufacturer name (required)" },
+        url: { type: "string", description: "Manufacturer website URL" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "update_manufacturer",
+    description: "Update an existing manufacturer in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        manufacturer_id: { type: "number", description: "The ID of the manufacturer to update (required)" },
+        name: { type: "string", description: "Manufacturer name" },
+        url: { type: "string", description: "Manufacturer website URL" },
+      },
+      required: ["manufacturer_id"],
+    },
+  },
+  {
+    name: "delete_manufacturer",
+    description: "Delete a manufacturer from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        manufacturer_id: { type: "number", description: "The ID of the manufacturer to delete" },
+      },
+      required: ["manufacturer_id"],
+    },
+  },
+  {
+    name: "create_supplier",
+    description: "Create a new supplier in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Supplier name (required)" },
+        address: { type: "string", description: "Street address" },
+        city: { type: "string", description: "City" },
+        state: { type: "string", description: "State/Province" },
+        country: { type: "string", description: "Country" },
+        zip: { type: "string", description: "Zip/Postal code" },
+        contact: { type: "string", description: "Contact person name" },
+        phone: { type: "string", description: "Phone number" },
+        email: { type: "string", description: "Email address" },
+        url: { type: "string", description: "Website URL" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "update_supplier",
+    description: "Update an existing supplier in Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        supplier_id: { type: "number", description: "The ID of the supplier to update (required)" },
+        name: { type: "string", description: "Supplier name" },
+        address: { type: "string", description: "Street address" },
+        city: { type: "string", description: "City" },
+        state: { type: "string", description: "State/Province" },
+        country: { type: "string", description: "Country" },
+        zip: { type: "string", description: "Zip/Postal code" },
+        contact: { type: "string", description: "Contact person name" },
+        phone: { type: "string", description: "Phone number" },
+        email: { type: "string", description: "Email address" },
+        url: { type: "string", description: "Website URL" },
+      },
+      required: ["supplier_id"],
+    },
+  },
+  {
+    name: "delete_supplier",
+    description: "Delete a supplier from Snipe-IT",
+    inputSchema: {
+      type: "object",
+      properties: {
+        supplier_id: { type: "number", description: "The ID of the supplier to delete" },
+      },
+      required: ["supplier_id"],
     },
   },
 ];
@@ -667,6 +1181,68 @@ function createMcpServer(clientIp: string): Server {
           break;
         case "list_suppliers":
           result = await snipeit.listSuppliers(args);
+          break;
+
+        // ---- UPDATE & DELETE HANDLERS ----
+        case "update_asset":
+          result = await snipeit.updateAsset(args);
+          break;
+        case "delete_asset":
+          result = await snipeit.deleteAsset(args);
+          break;
+        case "create_user":
+          result = await snipeit.createUser(args);
+          break;
+        case "update_user":
+          result = await snipeit.updateUser(args);
+          break;
+        case "delete_user":
+          result = await snipeit.deleteUser(args);
+          break;
+        case "create_model":
+          result = await snipeit.createModel(args);
+          break;
+        case "update_model":
+          result = await snipeit.updateModel(args);
+          break;
+        case "delete_model":
+          result = await snipeit.deleteModel(args);
+          break;
+        case "create_category":
+          result = await snipeit.createCategory(args);
+          break;
+        case "update_category":
+          result = await snipeit.updateCategory(args);
+          break;
+        case "delete_category":
+          result = await snipeit.deleteCategory(args);
+          break;
+        case "create_location":
+          result = await snipeit.createLocation(args);
+          break;
+        case "update_location":
+          result = await snipeit.updateLocation(args);
+          break;
+        case "delete_location":
+          result = await snipeit.deleteLocation(args);
+          break;
+        case "create_manufacturer":
+          result = await snipeit.createManufacturer(args);
+          break;
+        case "update_manufacturer":
+          result = await snipeit.updateManufacturer(args);
+          break;
+        case "delete_manufacturer":
+          result = await snipeit.deleteManufacturer(args);
+          break;
+        case "create_supplier":
+          result = await snipeit.createSupplier(args);
+          break;
+        case "update_supplier":
+          result = await snipeit.updateSupplier(args);
+          break;
+        case "delete_supplier":
+          result = await snipeit.deleteSupplier(args);
           break;
         default:
           throw new Error(`Unknown tool: ${name}`);
